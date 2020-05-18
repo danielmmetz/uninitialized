@@ -34,7 +34,8 @@ Example:
 ```go
 func main() {
     _ = Foo{}  // `Foo missing required keys: [Member]`
-    _ = Foo{Member: Bar{}}  // OK }
+    _ = Foo{Member: Bar{}}  // OK
+}
 ```
 
 ### Run
