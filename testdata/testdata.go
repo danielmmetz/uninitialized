@@ -1,4 +1,6 @@
-package testfile
+package testdata
+
+import "github.com/danielmmetz/uninitialized/testdata/external"
 
 type Foo struct {
 	Bar      `required:"true"`
@@ -53,4 +55,9 @@ func builtinUses() {
 		PublicBoolP:   &fBool,
 		DoublePointer: &fBoolP,
 	}
+}
+
+func externalUses() {
+	_ = external.External{} // want `External missing required keys: \[Required\]`
+	_ = external.External{Required: false}
 }
