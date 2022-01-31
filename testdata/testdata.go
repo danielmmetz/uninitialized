@@ -56,6 +56,10 @@ func builtinUses() {
 	}
 }
 
+func inPackageReferencingSecondFile() {
+	_ = SecondFileStruct{} // want `SecondFileStruct missing required keys: \[Bool\]`
+}
+
 func externalUses() {
 	_ = external.External{} // want `External missing required keys: \[Required\]`
 	_ = external.External{Required: false}
