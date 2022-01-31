@@ -6,13 +6,13 @@ linters:
     - goconst
     - gofmt
     - goimports
-    - golint
     - gosec
     - gosimple
     - govet
     - ineffassign
     - misspell
     - nakedret
+    - revive
     - staticcheck
     - structcheck
     - typecheck
