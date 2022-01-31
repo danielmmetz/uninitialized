@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"reflect"
 	"sort"
 	"strconv"
 
@@ -13,17 +14,30 @@ import (
 )
 
 var Analyzer = &analysis.Analyzer{
-	Name:     "uninitialized",
-	Doc:      "check for uninitialized but required struct fields within composite literals",
-	Run:      run,
-	Requires: []*analysis.Analyzer{inspect.Analyzer},
+	Name:      "uninitialized",
+	Doc:       "check for uninitialized but required struct fields within composite literals",
+	Run:       run,
+	Requires:  []*analysis.Analyzer{inspect.Analyzer},
+	FactTypes: []analysis.Fact{new(hasRequiredFields)},
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	_ = make(map[reflect.Type][]string)
+	inspect.Preorder([]ast.Node{new(ast.TypeSpec)}, func(n ast.Node) {
+		ts := n.(*ast.TypeSpec)
+		fields := requiredFieldsFromType(ts)
+		if len(fields) > 0 {
+			obj, ok := pass.TypesInfo.Defs[ts.Name]
+			if !ok {
+				return
+			}
+			pass.ExportObjectFact(obj, &hasRequiredFields{requiredFields: fields})
+		}
+	})
 	inspect.Preorder([]ast.Node{new(ast.CompositeLit)}, func(n ast.Node) {
 		lit := n.(*ast.CompositeLit)
-		required := requiredFields(lit)
+		required := requiredFieldsForCompositLit(pass, lit)
 		for _, element := range lit.Elts {
 			kv, ok := element.(*ast.KeyValueExpr)
 			if !ok {
@@ -40,8 +54,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 		if len(required) > 0 {
 			var typeName string
-			if ident, ok := lit.Type.(*ast.Ident); ok {
-				typeName = fmt.Sprintf("%s ", ident.Name)
+			switch t := lit.Type.(type) {
+			case *ast.Ident:
+				typeName = fmt.Sprintf("%s ", t.Name)
+			case *ast.SelectorExpr:
+				typeName = fmt.Sprintf("%s ", t.Sel.Name)
 			}
 			pass.Reportf(n.Pos(), "%smissing required keys: %v", typeName, sortedKeys(required))
 		}
@@ -50,9 +67,22 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
-func requiredFields(lit *ast.CompositeLit) map[string]bool {
-	ident, ok := lit.Type.(*ast.Ident)
-	if !ok {
+func requiredFieldsForCompositLit(pass *analysis.Pass, lit *ast.CompositeLit) map[string]bool {
+	var ident *ast.Ident
+	switch t := lit.Type.(type) {
+	case *ast.Ident:
+		ident = t
+	case *ast.SelectorExpr:
+		obj, ok := pass.TypesInfo.Uses[t.Sel]
+		if !ok {
+			return nil
+		}
+		var f hasRequiredFields
+		if ok := pass.ImportObjectFact(obj, &f); !ok {
+			return nil
+		}
+		return f.requiredFields
+	default:
 		return nil
 	}
 	if ident.Obj == nil {
@@ -62,7 +92,26 @@ func requiredFields(lit *ast.CompositeLit) map[string]bool {
 	if !ok {
 		return nil
 	}
-	st, ok := ts.Type.(*ast.StructType)
+	return requiredFieldsFromType(ts)
+}
+
+type hasRequiredFields struct {
+	requiredFields map[string]bool
+}
+
+func (f *hasRequiredFields) AFact() {}
+
+func (f *hasRequiredFields) String() string {
+	keys := make([]string, 0, len(f.requiredFields))
+	for k := range f.requiredFields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return fmt.Sprint(keys)
+}
+
+func requiredFieldsFromType(lit *ast.TypeSpec) map[string]bool {
+	st, ok := lit.Type.(*ast.StructType)
 	if !ok {
 		return nil
 	}

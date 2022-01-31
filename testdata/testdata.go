@@ -2,7 +2,7 @@ package testdata
 
 import "github.com/danielmmetz/uninitialized/testdata/external"
 
-type Foo struct {
+type Foo struct { // want Foo:"[Bar NamedBar]"
 	Bar      `required:"true"`
 	NamedBar Bar `required:"true"`
 }
@@ -16,7 +16,7 @@ type Bar struct {
 	Baz Baz
 }
 
-type BarWithBaz struct {
+type BarWithBaz struct { // want BarWithBaz:"[Baz]"
 	Baz Baz `required:"true"`
 }
 
@@ -29,10 +29,9 @@ func compositeUses() {
 	_ = OptionalFoo{}
 	_ = BarWithBaz{} // want `BarWithBaz missing required keys: \[Baz\]`
 	_ = BarWithBaz{Baz: Baz{}}
-
 }
 
-type basicTypes struct {
+type basicTypes struct { // want basicTypes:"[bool namedBool PublicBool boolP PublicBoolP DoublePointer]"
 	bool               `required:"true"`
 	namedBool          bool `required:"true"`
 	PublicBool         bool `required:"true"`
