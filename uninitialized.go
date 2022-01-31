@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/types"
 	"reflect"
 	"sort"
 	"strconv"
@@ -68,31 +69,33 @@ func run(pass *analysis.Pass) (interface{}, error) {
 }
 
 func requiredFieldsForCompositLit(pass *analysis.Pass, lit *ast.CompositeLit) map[string]bool {
-	var ident *ast.Ident
+	var obj types.Object
+	var ok bool
 	switch t := lit.Type.(type) {
 	case *ast.Ident:
-		ident = t
-	case *ast.SelectorExpr:
-		obj, ok := pass.TypesInfo.Uses[t.Sel]
+		obj, ok = pass.TypesInfo.Uses[t]
 		if !ok {
 			return nil
 		}
-		var f hasRequiredFields
-		if ok := pass.ImportObjectFact(obj, &f); !ok {
+		if t.Obj == nil {
+			break
+		}
+		if ts, ok := t.Obj.Decl.(*ast.TypeSpec); ok {
+			return requiredFieldsFromType(ts)
+		}
+	case *ast.SelectorExpr:
+		obj, ok = pass.TypesInfo.Uses[t.Sel]
+		if !ok {
 			return nil
 		}
-		return f.requiredFields
 	default:
 		return nil
 	}
-	if ident.Obj == nil {
-		return nil
+	var f hasRequiredFields
+	if ok := pass.ImportObjectFact(obj, &f); ok {
+		return f.requiredFields
 	}
-	ts, ok := ident.Obj.Decl.(*ast.TypeSpec)
-	if !ok {
-		return nil
-	}
-	return requiredFieldsFromType(ts)
+	return nil
 }
 
 type hasRequiredFields struct {
