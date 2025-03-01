@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/types"
+	"maps"
 	"reflect"
 	"sort"
 	"strconv"
@@ -93,7 +94,7 @@ func requiredFieldsForCompositLit(pass *analysis.Pass, lit *ast.CompositeLit) ma
 	}
 	var f hasRequiredFields
 	if ok := pass.ImportObjectFact(obj, &f); ok {
-		return f.requiredFields
+		return maps.Clone(f.requiredFields)
 	}
 	return nil
 }
