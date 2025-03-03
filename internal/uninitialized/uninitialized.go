@@ -1,4 +1,4 @@
-package main
+package uninitialized
 
 import (
 	"fmt"
@@ -14,12 +14,14 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-var Analyzer = &analysis.Analyzer{
-	Name:      "uninitialized",
-	Doc:       "check for uninitialized but required struct fields within composite literals",
-	Run:       run,
-	Requires:  []*analysis.Analyzer{inspect.Analyzer},
-	FactTypes: []analysis.Fact{new(hasRequiredFields)},
+func NewAnalyzer() *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:      "uninitialized",
+		Doc:       "check for uninitialized but required struct fields within composite literals",
+		Run:       run,
+		Requires:  []*analysis.Analyzer{inspect.Analyzer},
+		FactTypes: []analysis.Fact{new(hasRequiredFields)},
+	}
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
@@ -32,7 +34,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if !ok {
 				return
 			}
-			pass.ExportObjectFact(obj, &hasRequiredFields{requiredFields: fields})
+			pass.ExportObjectFact(obj, &hasRequiredFields{RequiredFields: fields})
 		}
 	})
 	inspect.Preorder([]ast.Node{new(ast.CompositeLit)}, func(n ast.Node) {
@@ -92,20 +94,20 @@ func requiredFieldsForCompositLit(pass *analysis.Pass, lit *ast.CompositeLit) ma
 	}
 	var f hasRequiredFields
 	if ok := pass.ImportObjectFact(obj, &f); ok {
-		return maps.Clone(f.requiredFields)
+		return maps.Clone(f.RequiredFields)
 	}
 	return nil
 }
 
 type hasRequiredFields struct {
-	requiredFields map[string]bool
+	RequiredFields map[string]bool
 }
 
 func (f *hasRequiredFields) AFact() {}
 
 func (f *hasRequiredFields) String() string {
-	keys := make([]string, 0, len(f.requiredFields))
-	for k := range f.requiredFields {
+	keys := make([]string, 0, len(f.RequiredFields))
+	for k := range f.RequiredFields {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

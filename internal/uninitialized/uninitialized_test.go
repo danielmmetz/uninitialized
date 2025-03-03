@@ -1,4 +1,4 @@
-package main
+package uninitialized
 
 import (
 	"path/filepath"
@@ -12,5 +12,5 @@ func Test(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to resolve path to testdata: %v", err)
 	}
-	analysistest.Run(t, testdata, Analyzer, "./...")
+	analysistest.Run(t, testdata, NewAnalyzer(), "./...")
 }
