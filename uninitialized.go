@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/types"
 	"maps"
-	"reflect"
 	"sort"
 	"strconv"
 
@@ -25,7 +24,6 @@ var Analyzer = &analysis.Analyzer{
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-	_ = make(map[reflect.Type][]string)
 	inspect.Preorder([]ast.Node{new(ast.TypeSpec)}, func(n ast.Node) {
 		ts := n.(*ast.TypeSpec)
 		fields := requiredFieldsFromType(ts)
