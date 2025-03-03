@@ -1,7 +1,6 @@
 linters:
   disable-all: true
   enable:
-    - deadcode
     - errcheck
     - goconst
     - gofmt
@@ -14,14 +13,12 @@ linters:
     - nakedret
     - revive
     - staticcheck
-    - structcheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
 linters-settings:
   misspell:
     locale: US
 run:
-  deadline: 2m
+  timeout: 2m
